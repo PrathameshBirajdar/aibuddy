@@ -3,3 +3,10 @@ cat .gitignore
 
 # Check if .env is tracked (should return nothing)
 git ls-files | grep .env
+
+# Environment & secrets
+.env
+*.pyc
+__pycache__/
+db.sqlite3
+/staticfiles/

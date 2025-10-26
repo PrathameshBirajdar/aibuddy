@@ -1,0 +1,67 @@
+<!-- aibuddy/chat/templates/chat/ask_me_anything.html -->
+{% load static %}
+<div id="ask-me-anything"
+    style="width:100%; max-width:760px; margin: 16px auto; background:#fff9f2; border-radius:10px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,.12);">
+    <h3 style="margin-top:0;">Ask Me Anything — AI Buddy</h3>
+    <div id="ama-body" style="min-height:140px; max-height:320px; overflow:auto; padding:8px; background:#fff;"></div>
+    <div style="display:flex; gap:8px; margin-top:10px;">
+        <input id="ama-input" type="text" placeholder="Ask about English, Math, GK, or anything!"
+            style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
+        <select id="ama-context">
+            <option value="general">General</option>
+            <option value="english">English</option>
+            <option value="math">Math</option>
+            <option value="gk">GK</option>
+            <option value="quiz">Quiz</option>
+        </select>
+        <button id="ama-send"
+            style="background:#ffb347; border:none; padding:10px 14px; border-radius:8px;">Ask</button>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const btn = document.getElementById('ama-send');
+        const input = document.getElementById('ama-input');
+        const body = document.getElementById('ama-body');
+        const ctx = document.getElementById('ama-context');
+
+        function append(text, who = 'bot') {
+            const el = document.createElement('div');
+            el.style.margin = '8px 0';
+            const bubble = document.createElement('div');
+            bubble.textContent = text;
+            bubble.style.padding = '8px 12px';
+            bubble.style.borderRadius = '10px';
+            bubble.style.maxWidth = '85%';
+            if (who === 'user') {
+                bubble.style.background = '#2f80ed'; bubble.style.color = '#fff'; bubble.style.marginLeft = '15%';
+            } else {
+                bubble.style.background = '#f1f6ff'; bubble.style.color = '#111';
+            }
+            el.appendChild(bubble); body.appendChild(el);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        async function send() {
+            const q = input.value.trim();
+            if (!q) return;
+            append(q, 'user'); input.value = '';
+            const loading = append('🤖 Thinking...', 'bot');
+            try {
+                const r = await fetch("{% url 'chat:chat_api' %}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: q, name: 'Buddy', context: ctx.value })
+                });
+                const data = await r.json();
+                loading.textContent = data.response || data.error || '⚠️ Something went wrong';
+            } catch (e) {
+                loading.textContent = '❌ Connection error';
+            }
+        }
+
+        btn.addEventListener('click', send);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+    })();
+</script>

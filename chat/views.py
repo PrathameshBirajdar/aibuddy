@@ -1,3 +1,4 @@
+# aibuddy/chat/views.py
 import os
 import json
 import requests
@@ -6,108 +7,101 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
-# ====================================
-# ✅ Environment Setup
-# ====================================
+# Load .env if present
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-dotenv_path = os.path.join(BASE_DIR, ".env")
-
-if os.path.exists(dotenv_path):
-    load_dotenv(dotenv_path)
-    print("✅ Loaded .env file")
-else:
-    print("⚠️ No .env file found — relying on system environment variables")
+env_path = os.path.join(BASE_DIR, "..", ".env")
+if os.path.exists(env_path):
+    load_dotenv(env_path)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_API_URL = os.getenv("GROQ_API_URL", "https://api.groq.com/openai/v1/chat/completions")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
-if GROQ_API_KEY:
-    print(f"✅ GROQ_API_KEY loaded: {GROQ_API_KEY[:10]}...")
-else:
-    print("❌ GROQ_API_KEY not found!")
-
-print(f"✅ GROQ_API_URL: {GROQ_API_URL}")
-
-# ====================================
-# 🔹 Chat Page
-# ====================================
+# Chat popup HTML
 def chat_page(request):
-    """Render chat popup UI"""
+    """Render the chat popup UI (template: chat/chat_page.html)."""
     return render(request, "chat/chat_page.html")
 
-
-# ====================================
-# 🔹 Chat API Endpoint
-# ====================================
+# API used by JS to get model response
 @csrf_exempt
 def chat_api(request):
-    """Handles chat messages sent from frontend to Groq API"""
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
     try:
-        data = json.loads(request.body)
-        user_message = data.get("message", "").strip()
-
-        if not user_message:
-            return JsonResponse({"error": "Message cannot be empty"}, status=400)
-
-        print(f"📤 User message: {user_message}")
-
-        # =========================
-        # 🧠 Model Handling
-        # =========================
-        model_name = "llama-3.3-70b-versatile"  # ✅ Primary model
-        fallback_model = "llama-3.3-8b-instant"  # ✅ Backup if Groq changes support
-
-        headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json"
-        }
-
-        payload = {
-            "model": model_name,
-            "messages": [{"role": "user", "content": user_message}],
-            "temperature": 0.7,
-            "max_tokens": 1024
-        }
-
-        print(f"🌐 Sending request to: {GROQ_API_URL}")
-        response = requests.post(GROQ_API_URL, headers=headers, json=payload)
-        response_data = response.json()
-
-        # =========================
-        # ⚠️ Handle errors
-        # =========================
-        if response.status_code != 200 or "error" in response_data:
-            err_msg = response_data.get("error", {}).get("message", "Unknown Groq error")
-            print(f"❌ Groq API Error: {err_msg}")
-
-            # Fallback if model is deprecated or invalid
-            if "model" in err_msg.lower():
-                print("⚠️ Switching to fallback model:", fallback_model)
-                payload["model"] = fallback_model
-                response = requests.post(GROQ_API_URL, headers=headers, json=payload)
-                response_data = response.json()
-
-            else:
-                return JsonResponse({"error": err_msg}, status=400)
-
-        # =========================
-        # ✅ Success: Return reply
-        # =========================
-        message = response_data["choices"][0]["message"]["content"]
-        print(f"🤖 Model reply: {message[:100]}...")
-        return JsonResponse({"response": message})
-
+        payload = json.loads(request.body or "{}")
     except json.JSONDecodeError:
-        print("❌ JSON decode error")
         return JsonResponse({"error": "Invalid JSON payload"}, status=400)
 
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Network error: {str(e)}")
-        return JsonResponse({"error": "Network request failed"}, status=500)
+    user_message = (payload.get("message") or "").strip()
+    kid_name = payload.get("name", "Buddy")
+    learning_context = payload.get("context", "general")  # e.g. english, math, gk, alphabets, numbers
 
+    if not user_message:
+        return JsonResponse({"error": "Message cannot be empty"}, status=400)
+
+    # Build system prompt for the model depending on context
+    system_prompt = f"You are AI Buddy, a friendly playful teacher for a child named {kid_name}. Speak in simple sentences, use emojis and encourage learning."
+
+    if learning_context == "alphabets":
+        system_prompt += " Teach letters A-Z with short examples like 'A for Apple 🍎'. Ask simple follow-ups."
+    elif learning_context == "numbers":
+        system_prompt += " Teach counting and simple arithmetic with step-by-step hints."
+    elif learning_context == "animals":
+        system_prompt += " Teach animal names and sounds with fun facts and small quizzes."
+    elif learning_context == "english":
+        system_prompt += " Help the child learn English words, rhymes and simple pronunciation tips."
+    elif learning_context == "math":
+        system_prompt += " Provide simple math practice, step-by-step explanation for sums appropriate for kids."
+    elif learning_context == "gk":
+        system_prompt += " Provide short, kid-friendly general knowledge facts and short quiz questions."
+    elif learning_context == "quiz":
+        system_prompt += " Ask a short multiple-choice quiz question appropriate for children."
+    elif learning_context == "stories":
+        system_prompt += " Tell a short moral story for young children with a clear moral."
+
+    # Request payload
+    request_payload = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ],
+        "temperature": 0.7,
+        "max_tokens": 512
+    }
+
+    if not GROQ_API_KEY:
+        return JsonResponse({"error": "Server misconfiguration: missing API key"}, status=500)
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        resp = requests.post(GROQ_API_URL, headers=headers, json=request_payload, timeout=30)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        # Don't leak internal details to client; log on server and return friendly message
+        print("Network/Groq error:", str(e))
+        return JsonResponse({"error": "Connection error. Please try again later."}, status=502)
+
+    try:
+        result = resp.json()
+    except ValueError:
+        return JsonResponse({"error": "Invalid response from AI service"}, status=502)
+
+    if "error" in result:
+        err_msg = result["error"].get("message", "Model error")
+        print("Model error:", result)
+        return JsonResponse({"error": err_msg}, status=400)
+
+    # OpenAI/Groq response shape: choices[0].message.content
+    try:
+        message_text = result["choices"][0]["message"]["content"]
     except Exception as e:
-        print(f"❌ Unexpected error: {str(e)}")
-        return JsonResponse({"error": str(e)}, status=500)
+        print("Unexpected model shape:", result, e)
+        return JsonResponse({"error": "Unexpected response from AI"}, status=502)
+
+    return JsonResponse({"response": message_text})
