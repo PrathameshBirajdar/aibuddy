@@ -1,10 +1,32 @@
+# ===============================
+# Render configuration for Django
+# ===============================
+
 services:
   - type: web
     name: ai-learning-buddy
     env: python
-    rootDir: .
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
     startCommand: gunicorn aibuddy.wsgi:application
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.13.4
+      - key: DEBUG
+        value: False
+      - key: DJANGO_SETTINGS_MODULE
+        value: aibuddy.settings
+      # These three should be set in Render Dashboard → Environment
+      # (don’t hardcode secrets here)
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_API_URL
+        sync: false
+      - key: DJANGO_SECRET_KEY
+        sync: false
+    healthCheckPath: /chat/popup/
+    autoDeploy: true
+    plan: free
+
+# optional: if you have static files served by Django’s collectstatic output
+staticPublishPath: staticfiles
