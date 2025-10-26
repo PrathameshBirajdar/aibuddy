@@ -11,6 +11,9 @@ from django.utils.decorators import method_decorator
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_API_URL = os.getenv("GROQ_API_URL", "https://api.groq.com/openai/v1/chat/completions")
 
+if os.getenv("RENDER") != "true" and not GROQ_API_KEY:
+    print("⚠️ Running locally — Groq API disabled.")
+
 # ✅ Main chat UI page (integrated with main project design)
 def chat_ui(request):
     """Renders the chatbot popup template — used with main project's design"""
