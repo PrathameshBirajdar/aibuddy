@@ -38,15 +38,19 @@ class ChatAPIView(View):
             print(f"✅ API Key loaded: {GROQ_API_KEY[:15]}...")
             print(f"📤 User message: {user_message}")
 
-            # Prepare request
+            # Prepare request with UPDATED MODEL NAME
             headers = {
                 "Authorization": f"Bearer {GROQ_API_KEY}",
                 "Content-Type": "application/json",
             }
 
             payload = {
-                "model": "llama3-8b-8192",
+                "model": "llama-3.3-70b-versatile",  # ✅ Updated to current model
                 "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are AI Buddy, a friendly and helpful educational chatbot for children. Keep responses simple, encouraging, and age-appropriate."
+                    },
                     {
                         "role": "user", 
                         "content": user_message
@@ -57,7 +61,6 @@ class ChatAPIView(View):
             }
 
             print(f"🌐 Sending to: {GROQ_API_URL}")
-            print(f"📦 Payload: {json.dumps(payload, indent=2)}")
 
             # Send to Groq API
             response = requests.post(
@@ -69,7 +72,6 @@ class ChatAPIView(View):
 
             # Log response
             print(f"📥 Status Code: {response.status_code}")
-            print(f"📥 Response: {response.text[:500]}")
 
             if response.status_code != 200:
                 error_detail = response.text
