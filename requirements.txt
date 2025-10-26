@@ -4,9 +4,11 @@ charset-normalizer==3.4.4
 Django==5.2.4
 djangorestframework==3.16.1
 git-filter-repo==2.47.0
+gunicorn==23.0.0
 idna==3.11
 mysql-connector-python==9.5.0
 mysqlclient==2.2.7
+packaging==25.0
 pillow==11.3.0
 python-dotenv==1.1.1
 requests==2.32.5
