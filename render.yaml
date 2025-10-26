@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: ai-learning-buddy
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn aibuddy.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11

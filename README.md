@@ -1,0 +1,2 @@
+# aibuddy
+Capstone project ai
