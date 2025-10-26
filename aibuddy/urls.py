@@ -3,15 +3,12 @@ from django.urls import path, include
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 
-# ✅ Add a simple home view inline for now
 def home_view(request):
-    return render(request, "home.html")  # or your actual home template
+    return render(request, "home.html")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("chat/", include("chat.urls")),
-
-    # Redirect root (/) to home
-    path("", lambda request: HttpResponseRedirect("/home/")),
-    path("home/", home_view, name="home"),  # ✅ This adds /home/
+    path("chat/", include("chat.urls")),  # ✅ include chat endpoints
+    path("", lambda request: HttpResponseRedirect("/home/")),  # redirect /
+    path("home/", home_view, name="home"),
 ]

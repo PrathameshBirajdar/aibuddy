@@ -31,8 +31,7 @@ SECRET_KEY = "django-insecure-ojm%ex-s7ya%(_mh&-ne!9ue3&lp*$h@c3@&bg#p^z(#jvh+2l
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*", "ai-learning-buddy-r82b.onrender.com", "127.0.0.1", "localhost"]
-
+ALLOWED_HOSTS = ["*", "127.0.0.1", "localhost", "ai-learning-buddy-r82b.onrender.com"]
 
 # Application definition
 
@@ -64,10 +63,15 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "aibuddy.urls"
 
+ 
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # ✅ this must point to your template folder
+        'DIRS': [
+            # ✅ Point to Ai-Learning-Buddy frontend templates
+            r"C:\Users\Prathmesh D Birajdar\Capstone\Ai-Learning-Buddy\Fronted\templete",
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

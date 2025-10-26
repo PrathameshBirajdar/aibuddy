@@ -19,6 +19,12 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             z-index: 9999;
+            transition: transform 0.2s ease, background 0.3s;
+        }
+
+        #chatButton:hover {
+            background: #2563eb;
+            transform: scale(1.08);
         }
 
         /* Chat modal */
@@ -58,6 +64,29 @@
             padding: 10px;
             gap: 8px;
             background: white;
+            border-top: 1px solid #ddd;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        #sendBtn {
+            background: #2f80ed;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        #sendBtn:hover {
+            background: #2563eb;
         }
 
         .msg.user {
@@ -71,6 +100,7 @@
             margin: 6px 0;
             max-width: 80%;
             word-wrap: break-word;
+            line-height: 1.4;
         }
 
         .bubble.user {
@@ -81,6 +111,11 @@
         .bubble.bot {
             background: #eef2ff;
             color: #111;
+        }
+
+        .bubble.error {
+            background: #ffe4e6;
+            color: #b91c1c;
         }
     </style>
 </head>
@@ -99,8 +134,7 @@
         </div>
         <div id="chatBody" aria-live="polite"></div>
         <div id="chatInputWrap">
-            <input id="chatInput" type="text" placeholder="Say hi..."
-                style="flex:1; padding:8px; border-radius:8px; border:1px solid #ddd;">
+            <input id="chatInput" type="text" placeholder="Say hi..." />
             <button id="sendBtn">Send</button>
         </div>
     </div>
@@ -115,11 +149,10 @@
         const chatInput = document.getElementById('chatInput');
         const chatBody = document.getElementById('chatBody');
 
-        // ✅ 1. Detect correct API base (works locally & on Render)
-        const baseURL = window.location.origin;
-            const apiURL = `${baseURL}/chat/api/chat/`;
+        // ✅ Base URL (works locally & on Render)
+        const apiURL = `${window.location.origin}/chat/api/chat/`;
 
-        // ✅ 2. CSRF helper
+        // ✅ Get CSRF Token from cookie
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -136,24 +169,23 @@
         }
         const csrftoken = getCookie('csrftoken');
 
-        // UI functions
-        function openModal() {
+        // ✅ Open & close modal
+        chatButton.addEventListener('click', () => {
             chatModal.style.display = 'block';
             chatModal.setAttribute('aria-hidden', 'false');
             chatInput.focus();
-        }
-        function closeModal() {
+        });
+        closeBtn.addEventListener('click', () => {
             chatModal.style.display = 'none';
             chatModal.setAttribute('aria-hidden', 'true');
-        }
-        chatButton.addEventListener('click', openModal);
-        closeBtn.addEventListener('click', closeModal);
+        });
 
-        function appendMessage(text, who = 'bot') {
+        // ✅ Append message to chat
+        function appendMessage(text, who = 'bot', isError = false) {
             const div = document.createElement('div');
             div.className = who === 'user' ? 'msg user' : 'msg bot';
             const bubble = document.createElement('div');
-            bubble.className = 'bubble ' + (who === 'user' ? 'user' : 'bot');
+            bubble.className = 'bubble ' + (isError ? 'error' : who);
             bubble.textContent = text;
             div.appendChild(bubble);
             chatBody.appendChild(div);
@@ -161,14 +193,14 @@
             return bubble;
         }
 
-        // ✅ 3. Sending message to Django
+        // ✅ Main send logic
         async function sendMessage() {
             const msg = chatInput.value.trim();
             if (!msg) return;
 
             appendMessage(msg, 'user');
             chatInput.value = '';
-            const loadingBubble = appendMessage('🤔 Thinking...', 'bot');
+            const loading = appendMessage('🤔 Thinking...', 'bot');
 
             try {
                 const res = await fetch(apiURL, {
@@ -180,15 +212,28 @@
                     body: JSON.stringify({ message: msg })
                 });
 
+                if (!res.ok) {
+                    loading.textContent = `⚠️ Server error (${res.status})`;
+                    loading.classList.add('error');
+                    return;
+                }
+
                 const data = await res.json();
-                if (data.response) {
-                    loadingBubble.textContent = data.response;
+
+                if (data.reply) {
+                    loading.textContent = data.reply;
+                } else if (data.response) {
+                    loading.textContent = data.response;
+                } else if (data.error) {
+                    loading.textContent = `⚠️ ${data.error}`;
+                    loading.classList.add('error');
                 } else {
-                    loadingBubble.textContent = data.error || '⚠️ Something went wrong';
+                    loading.textContent = '🤷 No response from AI.';
                 }
             } catch (err) {
                 console.error('Network error:', err);
-                loadingBubble.textContent = '❌ Network error – check connection';
+                loading.textContent = '❌ Network error — please check your internet.';
+                loading.classList.add('error');
             }
         }
 
