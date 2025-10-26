@@ -1,10 +1,5 @@
-# Environment files
-.env
-*.env
+# Make sure .env is ignored
+cat .gitignore
 
-# Database
-db.sqlite3
-
-# Compiled files
-__pycache__/
-*.pyc
+# Check if .env is tracked (should return nothing)
+git ls-files | grep .env
