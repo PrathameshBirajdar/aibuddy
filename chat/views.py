@@ -1,41 +1,34 @@
-# chat/views.py
-import json
-import requests
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
+import requests, os, json
+from dotenv import load_dotenv
+
+load_dotenv()
 
 @csrf_exempt
 def chat_api(request):
-    if request.method != "POST":
-        return HttpResponseBadRequest("POST required")
+    if request.method == "POST":
+        data = json.loads(request.body.decode("utf-8"))
+        user_message = data.get("message", "")
 
-    data = json.loads(request.body)
-    user_message = data.get("message", "")
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        groq_url = os.getenv("GROQ_API_URL", "https://api.groq.com/openai/v1/chat/completions")
 
-    if not user_message:
-        return JsonResponse({"error": "Empty message"}, status=400)
+        headers = {
+            "Authorization": f"Bearer {groq_api_key}",
+            "Content-Type": "application/json",
+        }
 
-    # ✅ Correct Groq-style payload
-    payload = {
-        "model": "llama3-8b-8192",  # or the model you selected in Groq dashboard
-        "messages": [
-            {"role": "system", "content": "You are AI Buddy, a friendly chatbot."},
-            {"role": "user", "content": user_message}
-        ]
-    }
+        payload = {
+            "model": "llama-3.1-70b-versatile",
+            "messages": [{"role": "user", "content": user_message}],
+        }
 
-    headers = {
-        "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
+        response = requests.post(groq_url, headers=headers, json=payload)
+        if response.status_code == 200:
+            answer = response.json()["choices"][0]["message"]["content"]
+            return JsonResponse({"response": answer})
+        else:
+            return JsonResponse({"error": "Groq API request failed"}, status=500)
 
-    try:
-        response = requests.post(settings.GROQ_API_URL, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
-
-        data = response.json()
-        reply = data["choices"][0]["message"]["content"]  # ✅ Groq's format
-        return JsonResponse({"reply": reply})
-    except Exception as e:
-        return JsonResponse({"error": "External API error", "detail": str(e)}, status=502)
+    return JsonResponse({"error": "Invalid request"}, status=400)

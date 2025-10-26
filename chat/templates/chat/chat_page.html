@@ -3,9 +3,9 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>AI Chat Popup</title>
+    <title>AI Buddy Chat</title>
     <style>
-        /* Chat bubble modal styling */
+        /* Floating chat button */
         #chatButton {
             position: fixed;
             right: 20px;
@@ -21,6 +21,7 @@
             z-index: 9999;
         }
 
+        /* Chat modal */
         #chatModal {
             display: none;
             position: fixed;
@@ -104,7 +105,6 @@
         </div>
     </div>
 
-    <!-- Django injects CSRF token here -->
     {% csrf_token %}
 
     <script>
@@ -115,8 +115,11 @@
         const chatInput = document.getElementById('chatInput');
         const chatBody = document.getElementById('chatBody');
 
-        /* ---------------- Security: CSRF ---------------- */
-        // Get CSRF token safely from Django cookie
+        // ✅ 1. Detect correct API base (works locally & on Render)
+        const baseURL = window.location.origin;
+            const apiURL = `${baseURL}/chat/api/chat/`;
+
+        // ✅ 2. CSRF helper
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -133,7 +136,7 @@
         }
         const csrftoken = getCookie('csrftoken');
 
-        /* ---------------- UI Functions ---------------- */
+        // UI functions
         function openModal() {
             chatModal.style.display = 'block';
             chatModal.setAttribute('aria-hidden', 'false');
@@ -155,43 +158,42 @@
             div.appendChild(bubble);
             chatBody.appendChild(div);
             chatBody.scrollTop = chatBody.scrollHeight;
+            return bubble;
         }
 
-        /* ---------------- Message Send Logic ---------------- */
+        // ✅ 3. Sending message to Django
         async function sendMessage() {
             const msg = chatInput.value.trim();
             if (!msg) return;
 
             appendMessage(msg, 'user');
             chatInput.value = '';
-            appendMessage('...', 'bot'); // loading placeholder
+            const loadingBubble = appendMessage('🤔 Thinking...', 'bot');
 
             try {
-                const res = await fetch('/chat/api/chat/', {
+                const res = await fetch(apiURL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken  // ✅ Secure header for Django
+                        'X-CSRFToken': csrftoken
                     },
                     body: JSON.stringify({ message: msg })
                 });
 
                 const data = await res.json();
-                const lastBubble = chatBody.querySelector('.msg.bot:last-child .bubble');
-
-                if (data.error) {
-                    lastBubble.textContent = `⚠️ ${data.error}`;
+                if (data.response) {
+                    loadingBubble.textContent = data.response;
                 } else {
-                    lastBubble.textContent = data.reply || '[no reply]';
+                    loadingBubble.textContent = data.error || '⚠️ Something went wrong';
                 }
-            } catch (e) {
-                const lastBubble = chatBody.querySelector('.msg.bot:last-child .bubble');
-                lastBubble.textContent = '❌ Network error';
+            } catch (err) {
+                console.error('Network error:', err);
+                loadingBubble.textContent = '❌ Network error – check connection';
             }
         }
 
         sendBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keydown', (e) => {
+        chatInput.addEventListener('keydown', e => {
             if (e.key === 'Enter') sendMessage();
         });
     </script>
