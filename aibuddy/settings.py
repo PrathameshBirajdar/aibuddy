@@ -31,7 +31,8 @@ SECRET_KEY = "django-insecure-ojm%ex-s7ya%(_mh&-ne!9ue3&lp*$h@c3@&bg#p^z(#jvh+2l
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["*", "ai-learning-buddy-r82b.onrender.com", "127.0.0.1", "localhost"]
+
 
 # Application definition
 
