@@ -2,7 +2,7 @@ services:
   - type: web
     name: ai-learning-buddy
     env: python
-    rootDir: aibuddy
+    rootDir: .
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn aibuddy.wsgi:application
     envVars:

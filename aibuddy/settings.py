@@ -68,10 +68,7 @@ ROOT_URLCONF = "aibuddy.urls"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            # ✅ Point to Ai-Learning-Buddy frontend templates
-            r"C:\Users\Prathmesh D Birajdar\Capstone\Ai-Learning-Buddy\Fronted\templete",
-        ],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # ✅ Global templates directory
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -83,7 +80,6 @@ TEMPLATES = [
         },
     },
 ]
-
 
 WSGI_APPLICATION = "aibuddy.wsgi.application"
 
