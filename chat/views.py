@@ -7,7 +7,9 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
-# Load .env if present
+# ======================================================
+# 🔹 Environment Setup
+# ======================================================
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env_path = os.path.join(BASE_DIR, "..", ".env")
 if os.path.exists(env_path):
@@ -17,14 +19,20 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_API_URL = os.getenv("GROQ_API_URL", "https://api.groq.com/openai/v1/chat/completions")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
-# Chat popup HTML
+
+# ======================================================
+# 🔹 Chat Page Renderer
+# ======================================================
 def chat_page(request):
-    """Render the chat popup UI (template: chat/chat_page.html)."""
     return render(request, "chat/chat_page.html")
 
-# API used by JS to get model response
+
+# ======================================================
+# 🔹 Chat + Quiz API (with memory)
+# ======================================================
 @csrf_exempt
 def chat_api(request):
+    """AI Buddy with image generation, quiz + memory tracking."""
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
@@ -35,73 +43,137 @@ def chat_api(request):
 
     user_message = (payload.get("message") or "").strip()
     kid_name = payload.get("name", "Buddy")
-    learning_context = payload.get("context", "general")  # e.g. english, math, gk, alphabets, numbers
+    learning_context = payload.get("context", "general")
 
     if not user_message:
         return JsonResponse({"error": "Message cannot be empty"}, status=400)
 
-    # Build system prompt for the model depending on context
-    system_prompt = f"You are AI Buddy, a friendly playful teacher for a child named {kid_name}. Speak in simple sentences, use emojis and encourage learning."
+    # ✅ Initialize quiz memory in session
+    session = request.session
+    if "quiz_stats" not in session:
+        session["quiz_stats"] = {"total": 0, "correct": 0, "current_answer": None}
+        session.save()
 
-    if learning_context == "alphabets":
-        system_prompt += " Teach letters A-Z with short examples like 'A for Apple 🍎'. Ask simple follow-ups."
-    elif learning_context == "numbers":
-        system_prompt += " Teach counting and simple arithmetic with step-by-step hints."
-    elif learning_context == "animals":
-        system_prompt += " Teach animal names and sounds with fun facts and small quizzes."
-    elif learning_context == "english":
-        system_prompt += " Help the child learn English words, rhymes and simple pronunciation tips."
+    quiz_stats = session["quiz_stats"]
+
+    # ======================================================
+    # 🧠 Check if user answered a quiz question
+    # ======================================================
+    if learning_context == "quiz_followup":
+        user_answer = user_message.strip().lower()
+        correct_answer = (quiz_stats.get("current_answer") or "").lower()
+
+        if not correct_answer:
+            return JsonResponse({"response": "Let’s start a new quiz! Ask me a question 🧠"})
+
+        quiz_stats["total"] += 1
+        if user_answer == correct_answer:
+            quiz_stats["correct"] += 1
+            response_text = f"✅ Correct, {kid_name}! Great job! 🎉"
+        else:
+            response_text = f"❌ Oops! The correct answer was **{correct_answer}**."
+
+        # If the quiz session has 5 questions, show summary
+        if quiz_stats["total"] >= 5:
+            score = quiz_stats["correct"]
+            response_text += f"\n🏅 You scored {score}/5! Let's take a break or start a new quiz!"
+            quiz_stats["total"] = 0
+            quiz_stats["correct"] = 0
+
+        quiz_stats["current_answer"] = None
+        session["quiz_stats"] = quiz_stats
+        session.save()
+
+        return JsonResponse({"response": response_text})
+
+    # ======================================================
+    # 🎓 Build AI Prompt Based on Learning Context
+    # ======================================================
+    system_prompt = (
+        f"You are AI Buddy, a friendly and patient teacher for a child named {kid_name}. "
+        "Explain in fun and encouraging ways using emojis.\n"
+        "If the child asks for a picture (like 'show me a lion'), reply with 'GENERATE_IMAGE: description'.\n"
+        "If they want a quiz, respond as: 'QUIZ: question? answer=correct_option options=[A,B,C,D]'.\n"
+        "Otherwise, just chat normally.\n"
+        "Avoid markdown or code format."
+    )
+
+    if learning_context == "ask_me_anything":
+        system_prompt += " Encourage curiosity about any topic (science, space, animals, etc.)."
     elif learning_context == "math":
-        system_prompt += " Provide simple math practice, step-by-step explanation for sums appropriate for kids."
+        system_prompt += " Teach basic math (addition, subtraction, etc.) with examples."
+    elif learning_context == "english":
+        system_prompt += " Help with simple English grammar, spelling, or meanings."
     elif learning_context == "gk":
-        system_prompt += " Provide short, kid-friendly general knowledge facts and short quiz questions."
-    elif learning_context == "quiz":
-        system_prompt += " Ask a short multiple-choice quiz question appropriate for children."
-    elif learning_context == "stories":
-        system_prompt += " Tell a short moral story for young children with a clear moral."
+        system_prompt += " Ask short general knowledge questions for kids."
+    elif learning_context == "animals":
+        system_prompt += " Teach animal facts and ask small quiz questions."
+    elif learning_context == "numbers":
+        system_prompt += " Teach counting and arithmetic playfully."
 
-    # Request payload
-    request_payload = {
+    # ======================================================
+    # 🔹 Send request to AI
+    # ======================================================
+    req_data = {
         "model": GROQ_MODEL,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
+            {"role": "user", "content": user_message},
         ],
-        "temperature": 0.7,
-        "max_tokens": 512
+        "temperature": 0.8,
+        "max_tokens": 512,
     }
-
-    if not GROQ_API_KEY:
-        return JsonResponse({"error": "Server misconfiguration: missing API key"}, status=500)
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
 
     try:
-        resp = requests.post(GROQ_API_URL, headers=headers, json=request_payload, timeout=30)
-        resp.raise_for_status()
+        response = requests.post(GROQ_API_URL, headers=headers, json=req_data, timeout=30)
+        response.raise_for_status()
+        result = response.json()
     except requests.RequestException as e:
-        # Don't leak internal details to client; log on server and return friendly message
-        print("Network/Groq error:", str(e))
-        return JsonResponse({"error": "Connection error. Please try again later."}, status=502)
+        print("❌ Groq error:", e)
+        return JsonResponse({"error": "AI service is currently unreachable."}, status=502)
 
-    try:
-        result = resp.json()
-    except ValueError:
-        return JsonResponse({"error": "Invalid response from AI service"}, status=502)
+    # ======================================================
+    # 🔹 Interpret AI Response
+    # ======================================================
+    reply = result["choices"][0]["message"]["content"].strip()
 
-    if "error" in result:
-        err_msg = result["error"].get("message", "Model error")
-        print("Model error:", result)
-        return JsonResponse({"error": err_msg}, status=400)
+    # 🎨 Image generation
+    if reply.startswith("GENERATE_IMAGE:"):
+        desc = reply.replace("GENERATE_IMAGE:", "").strip()
+        img_url = f"https://image.pollinations.ai/prompt/{desc.replace(' ', '%20')}"
+        return JsonResponse({
+            "response": f"Here’s {desc}! 🖼️",
+            "image": img_url
+        })
 
-    # OpenAI/Groq response shape: choices[0].message.content
-    try:
-        message_text = result["choices"][0]["message"]["content"]
-    except Exception as e:
-        print("Unexpected model shape:", result, e)
-        return JsonResponse({"error": "Unexpected response from AI"}, status=502)
+    # 🧠 Quiz question with correct answer
+    if reply.startswith("QUIZ:"):
+        try:
+            main_part = reply.replace("QUIZ:", "").strip()
+            question, rest = main_part.split("answer=")
+            question = question.strip()
+            answer_part, options_part = rest.split("options=")
+            correct_answer = answer_part.strip()
+            options = [opt.strip() for opt in options_part.strip("[]").split(",")]
 
-    return JsonResponse({"response": message_text})
+            # Store correct answer in session
+            quiz_stats["current_answer"] = correct_answer
+            session["quiz_stats"] = quiz_stats
+            session.save()
+
+            return JsonResponse({
+                "response": f"🤔 {question}",
+                "quiz_options": options
+            })
+
+        except Exception as e:
+            print("⚠️ Quiz parse error:", e)
+            return JsonResponse({"response": reply})
+
+    # Regular chat
+    return JsonResponse({"response": reply})
