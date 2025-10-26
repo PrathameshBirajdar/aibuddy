@@ -1,27 +1,50 @@
+import os
+import requests
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-import requests, os, json
-from dotenv import load_dotenv
+from django.utils.decorators import method_decorator
+from django.views import View
+import json
 
-load_dotenv()
+# ✅ Auto-detect Render environment variable
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-@csrf_exempt
-def chat_api(request):
-    if request.method == "POST":
-        data = json.loads(request.body.decode("utf-8"))
-        message = data.get("message", "")
+@method_decorator(csrf_exempt, name="dispatch")
+class ChatAPIView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            message = data.get("message", "").strip()
 
-        groq_api_key = os.getenv("GROQ_API_KEY")
-        groq_url = "https://api.groq.com/openai/v1/chat/completions"
+            if not message:
+                return JsonResponse({"error": "Message cannot be empty"}, status=400)
 
-        headers = {"Authorization": f"Bearer {groq_api_key}", "Content-Type": "application/json"}
-        payload = {"model": "llama-3.1-70b-versatile", "messages": [{"role": "user", "content": message}]}
+            if not GROQ_API_KEY:
+                return JsonResponse({
+                    "error": "Groq API key not configured. Please set it in Render Environment Variables."
+                }, status=500)
 
-        response = requests.post(groq_url, headers=headers, json=payload)
+            # ✅ Call Groq API
+            headers = {
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "llama3-8b-8192",  # or whichever model you're using
+                "messages": [
+                    {"role": "system", "content": "You are AI Buddy, a helpful learning assistant for kids."},
+                    {"role": "user", "content": message}
+                ]
+            }
 
-        if response.status_code == 200:
-            reply = response.json()["choices"][0]["message"]["content"]
+            response = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=20)
+            if response.status_code != 200:
+                return JsonResponse({"error": f"Groq API error: {response.text}"}, status=500)
+
+            result = response.json()
+            reply = result.get("choices", [{}])[0].get("message", {}).get("content", "")
             return JsonResponse({"response": reply})
-        else:
-            return JsonResponse({"error": "Groq API request failed"}, status=500)
-    return JsonResponse({"error": "Invalid request"}, status=400)
+
+        except Exception as e:
+            return JsonResponse({"error": f"Server error: {str(e)}"}, status=500)
