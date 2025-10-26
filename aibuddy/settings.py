@@ -66,7 +66,7 @@ ROOT_URLCONF = "aibuddy.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(BASE_DIR, "templates")],  # ✅ global templates folder
+        "DIRS": [os.path.join(BASE_DIR, "chat", "templates")],  # ✅ Use only chat_page.html
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
