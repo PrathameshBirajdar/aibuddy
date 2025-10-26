@@ -10,6 +10,9 @@ import json
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+if os.getenv("RENDER") != "true" and not GROQ_API_KEY:
+    print("⚠️ Running locally — Groq API disabled.")
+
 @method_decorator(csrf_exempt, name="dispatch")
 class ChatAPIView(View):
     def post(self, request):
