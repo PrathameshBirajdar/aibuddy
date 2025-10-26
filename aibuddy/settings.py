@@ -12,16 +12,33 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
-from pathlib import Path
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / '.env')
 
+# Load .env only if it exists (for local development)
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+    print("✅ Loaded .env file")
+else:
+    print("⚠️ No .env file found - using system environment variables")
+
+# Get API keys from environment
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-GROQ_API_URL = os.getenv('GROQ_API_URL')
+GROQ_API_URL = os.getenv('GROQ_API_URL', 'https://api.groq.com/openai/v1/chat/completions')
 
+# Debug: Check if API key is loaded
+if GROQ_API_KEY:
+    print(f"✅ GROQ_API_KEY loaded: {GROQ_API_KEY[:10]}...")
+else:
+    print("❌ GROQ_API_KEY not found!")
+
+# Rest of your settings...
+SECRET_KEY = "django-insecure-ojm%ex-s7ya%(_mh&-ne!9ue3&lp*$h@c3@&bg#p^z(#jvh+2l"
+DEBUG = True
+ALLOWED_HOSTS = ["*", "127.0.0.1", "localhost", "ai-learning-buddy-r82b.onrender.com"]
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
