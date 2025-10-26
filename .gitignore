@@ -1,0 +1,10 @@
+# Environment files
+.env
+*.env
+
+# Database
+db.sqlite3
+
+# Compiled files
+__pycache__/
+*.pyc
