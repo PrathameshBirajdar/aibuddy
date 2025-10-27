@@ -1,134 +1,196 @@
 {% load static %}
-<div id="ai-buddy-popup" aria-live="polite" style="position: fixed; right: 20px; bottom: 20px; z-index: 99999;">
-    <!-- 🧠 Floating button -->
-    <button id="ai-buddy-open" title="Open AI Buddy"
-        style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #2f80ed, #7b61ff);
-        color: #fff; font-size: 26px; border: none; box-shadow: 0 6px 20px rgba(0,0,0,.25); cursor: pointer;">🤖</button>
+<!-- 🌈 AI Buddy Universal Chat Popup -->
+<div id="ai-buddy-popup" aria-live="polite"
+    style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; font-family: 'Comic Sans MS', cursive;">
 
-    <!-- 💬 Chat modal -->
-    <div id="ai-buddy-modal" style="display:none; width:360px; background:#fff; border-radius:12px; box-shadow:0 16px 40px rgba(0,0,0,.3);
-        position: absolute; bottom: 70px; right: 0;">
+    <!-- 🎈 Floating Button -->
+    <button id="ai-buddy-open" title="Chat with your Buddy" style="width: 70px; height: 70px; border-radius: 50%;
+        background: linear-gradient(135deg, #ffb6c1, #ff9a9e);
+        color: #fff; font-size: 28px; border: none;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.25); cursor: pointer;
+        transition: all 0.25s ease-in-out; animation: float 3s ease-in-out infinite;">
+        🤖
+    </button>
 
-        <!-- 🟣 Header -->
-        <div style="background: linear-gradient(90deg,#2f80ed,#7b61ff); padding: 12px; color: #fff;
-            border-top-left-radius: 12px; border-top-right-radius: 12px;
-            display:flex; justify-content: space-between; align-items: center;">
-            <strong>AI Buddy</strong>
+    <!-- 💬 Chat Modal -->
+    <div id="ai-buddy-modal" style="display:none; width: 360px; background: #fffdf9; border-radius: 14px;
+        box-shadow: 0 14px 35px rgba(0,0,0,0.3); position: absolute; bottom: 85px; right: 0;
+        overflow: hidden; transition: all 0.3s ease;">
+
+        <!-- 🌟 Header -->
+        <div id="ai-header" style="background: linear-gradient(90deg, #ff9a9e, #fad0c4);
+            padding: 10px 14px; color: #fff; font-weight: bold; display: flex;
+            justify-content: space-between; align-items: center;">
+            <span>AI Buddy 🧠</span>
             <button id="ai-buddy-close"
                 style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">✖</button>
         </div>
 
-        <!-- 💭 Message area -->
-        <div id="ai-buddy-body" style="height:320px; overflow-y:auto; padding:10px; background:#f8f9ff;">
-            <div style="text-align:center; color:#777; font-size:14px;">👋 Hi there! I’m your AI Buddy. Ask me anything!
+        <!-- 💭 Chat Body -->
+        <div id="ai-buddy-body" style="height: 330px; overflow-y: auto; background: #fffafc;
+            padding: 12px; font-size: 15px;">
+            <div style="text-align:center; color:#666; margin-top:10px;">
+                👋 Hello! I’m your AI Buddy.<br>Ask me anything or choose a topic below! 🌈
             </div>
         </div>
 
-        <!-- ⌨️ Input area -->
-        <div style="display:flex; gap:8px; padding:10px; align-items:center; border-top:1px solid #eee;">
-            <input id="ai-buddy-input" type="text" placeholder="Ask me anything..."
-                style="flex:1; padding:8px; border-radius:8px; border:1px solid #ddd;">
-            <select id="ai-buddy-context" title="Mode" style="border-radius:6px; border:1px solid #ddd;">
-                <option value="general">General</option>
-                <option value="english">English</option>
-                <option value="math">Math</option>
-                <option value="gk">GK</option>
-                <option value="quiz">Quiz</option>
-                <option value="stories">Stories</option>
-                <option value="alphabets">Alphabets</option>
-                <option value="numbers">Numbers</option>
-                <option value="animals">Animals</option>
-                <option value="image">Generate Image 🖼️</option>
+        <!-- 🎨 Input Section -->
+        <div id="ai-input-container" style="display:flex; gap:6px; padding:10px; border-top:2px solid #ffd6d6;
+            background:#fff8f8;">
+            <input id="ai-buddy-input" type="text" placeholder="Type your question..." style="flex:1; padding:8px; border-radius:10px; border:2px solid #ffd6d6;
+                background:#fff; font-size:14px;">
+            <select id="ai-buddy-context" style="border-radius:10px; border:2px solid #ffd6d6; background:#fff;">
+                <option value="general">🌈 General</option>
+                <option value="english">🅰️ English</option>
+                <option value="math">🔢 Math</option>
+                <option value="gk">🌍 GK</option>
+                <option value="quiz">🎯 Quiz</option>
+                <option value="stories">📖 Story</option>
+                <option value="alphabets">🔤 Alphabets</option>
+                <option value="numbers">1️⃣ Numbers</option>
+                <option value="animals">🐾 Animals</option>
+                <option value="image">🖼️ Image</option>
             </select>
-            <button id="ai-buddy-send"
-                style="background:#2f80ed; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">Send</button>
+            <button id="ai-buddy-send" style="background:#ff9a9e; color:#fff; border:none;
+                padding:8px 10px; border-radius:10px; cursor:pointer;">🚀</button>
         </div>
     </div>
 </div>
 
-<!-- ✅ Working JS (loads after DOM) -->
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const openBtn = document.getElementById('ai-buddy-open');
-        const modal = document.getElementById('ai-buddy-modal');
-        const closeBtn = document.getElementById('ai-buddy-close');
-        const sendBtn = document.getElementById('ai-buddy-send');
-        const input = document.getElementById('ai-buddy-input');
-        const body = document.getElementById('ai-buddy-body');
-        const context = document.getElementById('ai-buddy-context');
-
-        // 💬 Message rendering helper
-        function appendMessage(text, who = 'bot') {
-            const wrapper = document.createElement('div');
-            wrapper.style.margin = '8px 0';
-            const bubble = document.createElement('div');
-            bubble.textContent = text;
-            bubble.style.padding = '8px 12px';
-            bubble.style.borderRadius = '12px';
-            bubble.style.maxWidth = '80%';
-            bubble.style.wordWrap = 'break-word';
-            bubble.style.display = 'inline-block';
-            bubble.style.clear = 'both';
-
-            if (who === 'user') {
-                bubble.style.background = '#2f80ed';
-                bubble.style.color = '#fff';
-                bubble.style.float = 'right';
-            } else {
-                bubble.style.background = '#eef2ff';
-                bubble.style.color = '#111';
-                bubble.style.float = 'left';
-            }
-
-            wrapper.appendChild(bubble);
-            body.appendChild(wrapper);
-            body.scrollTop = body.scrollHeight;
+<!-- 🎵 Animations & Auto Adjust -->
+<style>
+    @keyframes float {
+        0% {
+            transform: translateY(0);
         }
 
-        // 🧠 Send message logic
+        50% {
+            transform: translateY(-5px);
+        }
+
+        100% {
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        #ai-buddy-popup {
+            right: 0;
+            left: 0;
+            bottom: 10px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #ai-buddy-modal {
+            width: 90vw !important;
+            right: 5%;
+            bottom: 90px;
+        }
+    }
+
+    /* Automatically adapts to dark mode pages */
+    body.dark-mode #ai-buddy-modal {
+        background: #222;
+        color: #eee;
+    }
+
+    body.dark-mode #ai-header {
+        background: linear-gradient(90deg, #4b6cb7, #182848);
+    }
+
+    /* Prevents chatbot from showing during fullscreen modals (Ask Me Anything, etc.) */
+    body.modal-open #ai-buddy-popup {
+        display: none;
+    }
+</style>
+
+<!-- 💬 Interactive JS -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const openBtn = document.getElementById("ai-buddy-open");
+        const modal = document.getElementById("ai-buddy-modal");
+        const closeBtn = document.getElementById("ai-buddy-close");
+        const sendBtn = document.getElementById("ai-buddy-send");
+        const input = document.getElementById("ai-buddy-input");
+        const body = document.getElementById("ai-buddy-body");
+        const context = document.getElementById("ai-buddy-context");
+
+        // 🧸 Smooth message append
+        function appendMessage(text, who = "bot") {
+            const msg = document.createElement("div");
+            msg.className = who === "user" ? "user-msg" : "bot-msg";
+            msg.style.margin = "8px 0";
+            msg.style.maxWidth = "80%";
+            msg.style.clear = "both";
+            msg.style.wordBreak = "break-word";
+            msg.style.transition = "0.2s";
+
+            const bubble = document.createElement("div");
+            bubble.innerHTML = text.replace(/\n/g, "<br>");
+            bubble.style.padding = "10px 14px";
+            bubble.style.borderRadius = "15px";
+            bubble.style.display = "inline-block";
+            bubble.style.fontSize = "15px";
+
+            if (who === "user") {
+                bubble.style.background = "#ffd6d6";
+                bubble.style.float = "right";
+                bubble.textContent = `😃 ${text}`;
+            } else {
+                bubble.style.background = "#f1f5ff";
+                bubble.style.float = "left";
+                bubble.textContent = `🤖 ${text}`;
+            }
+
+            msg.appendChild(bubble);
+            body.appendChild(msg);
+            body.scrollTop = body.scrollHeight;
+            return bubble;
+        }
+
+        // 🚀 Sending logic
         async function sendMessage() {
             const msg = input.value.trim();
             if (!msg) return;
-            appendMessage(msg, 'user');
-            input.value = '';
-            const loading = appendMessage('🤔 Thinking...', 'bot');
+            appendMessage(msg, "user");
+            input.value = "";
+            const thinking = appendMessage("🤔 Thinking...", "bot");
 
             try {
-                const resp = await fetch("{% url 'chat:chat_api' %}", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: msg,
-                        name: 'Buddy',
-                        context: context.value
-                    })
+                const response = await fetch("{% url 'chat:chat_api' %}", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: msg, name: "Buddy", context: context.value })
                 });
-                const data = await resp.json();
+                const data = await response.json();
+                thinking.remove();
+
                 if (data.image_url) {
-                    loading.remove();
-                    const img = document.createElement('img');
+                    appendMessage("🎨 Here's what I imagined!", "bot");
+                    const img = document.createElement("img");
                     img.src = data.image_url;
-                    img.alt = "Generated image";
-                    img.style.maxWidth = "100%";
-                    img.style.borderRadius = "10px";
-                    appendMessage("🖼️ Here's what I imagined!", "bot");
+                    img.style.maxWidth = "90%";
+                    img.style.borderRadius = "12px";
+                    img.style.margin = "8px";
                     body.appendChild(img);
                 } else if (data.response) {
-                    loading.textContent = data.response;
+                    appendMessage(data.response, "bot");
                 } else {
-                    loading.textContent = data.error || '⚠️ Something went wrong.';
+                    appendMessage("⚠️ Oops! Something went wrong.", "bot");
                 }
-            } catch (err) {
-                loading.textContent = '❌ Connection error. Try again!';
+            } catch (error) {
+                thinking.textContent = "❌ Connection issue. Try again!";
             }
         }
 
-        // 🧩 Toggle modal
-        openBtn.addEventListener('click', () => {
-            modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+        // 🎯 Event bindings
+        openBtn.addEventListener("click", () => {
+            modal.style.display = modal.style.display === "block" ? "none" : "block";
         });
-        closeBtn.addEventListener('click', () => modal.style.display = 'none');
-        sendBtn.addEventListener('click', sendMessage);
-        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+        closeBtn.addEventListener("click", () => (modal.style.display = "none"));
+        sendBtn.addEventListener("click", sendMessage);
+        input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
     });
 </script>
