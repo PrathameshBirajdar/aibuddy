@@ -4,7 +4,7 @@
 
 services:
   - type: web
-    name: aibuddy           # ✅ Use your actual Render service name (lowercase recommended)
+    name: aibuddy
     env: python
     buildCommand: |
       pip install --upgrade pip
@@ -19,17 +19,16 @@ services:
       - key: DJANGO_SETTINGS_MODULE
         value: aibuddy.settings
       - key: PYTHONPATH
-        value: /opt/render/project/src       # ✅ ensures Django finds "aibuddy.chat" on Render
+        value: /opt/render/project/src
       - key: DJANGO_SECRET_KEY
-        sync: false                          # Set manually in Render Dashboard
+        sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_API_URL
         sync: false
 
-    healthCheckPath: /                       # ✅ safer default — responds on home route
+    healthCheckPath: /
     autoDeploy: true
     plan: free
 
-# ✅ Optional: publish collected static files (Django's collectstatic)
 staticPublishPath: staticfiles
