@@ -25,9 +25,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    "aibuddy.chat",  # ✅ full dotted path
+    "chat",  # ✅ correct path
 ]
-
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
