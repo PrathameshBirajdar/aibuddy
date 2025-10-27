@@ -1,32 +1,35 @@
-# ===============================
-# Render configuration for Django
-# ===============================
+# ================================================
+# Render configuration for Django (AIBUDDY project)
+# ================================================
 
 services:
   - type: web
-    name: ai-learning-buddy
+    name: aibuddy           # ✅ Use your actual Render service name (lowercase recommended)
     env: python
     buildCommand: |
+      pip install --upgrade pip
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
       python manage.py migrate
     startCommand: gunicorn aibuddy.wsgi:application
+
     envVars:
       - key: DEBUG
         value: False
       - key: DJANGO_SETTINGS_MODULE
         value: aibuddy.settings
-      # These three should be set in Render Dashboard → Environment
-      # (don’t hardcode secrets here)
+      - key: PYTHONPATH
+        value: /opt/render/project/src       # ✅ ensures Django finds "aibuddy.chat" on Render
+      - key: DJANGO_SECRET_KEY
+        sync: false                          # Set manually in Render Dashboard
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_API_URL
         sync: false
-      - key: DJANGO_SECRET_KEY
-        sync: false
-    healthCheckPath: /chat/popup/
+
+    healthCheckPath: /                       # ✅ safer default — responds on home route
     autoDeploy: true
     plan: free
 
-# optional: if you have static files served by Django’s collectstatic output
+# ✅ Optional: publish collected static files (Django's collectstatic)
 staticPublishPath: staticfiles
