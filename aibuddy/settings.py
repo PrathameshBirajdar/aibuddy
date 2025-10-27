@@ -10,7 +10,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", get_random_secret_key())
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ["*", "127.0.0.1", "localhost", "ai-learning-buddy-r82b.onrender.com"]
+ALLOWED_HOSTS = ["*", "127.0.0.1", "localhost", "aibuddy.onrender.com"]
 
 # External API keys (access in chat/views.py)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
